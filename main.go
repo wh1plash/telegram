@@ -4,20 +4,24 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"telegram/initializers"
 	"time"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jackc/pgx/v5"
 )
 
-const (
-	telegramToken = "8070880491:AAHmubgiYH3zeo46Q7qijpHvBx11SuGzWs8"
-	dbConnString  = "postgres://postgres:Geksagon-2018@localhost:5432/symbol_transport?search_path=perso"
-)
+func init() {
+	initializers.LoadEnvVariables()
+	initializers.ConnectToDB()
+}
+
+const ()
 
 func main() {
 	// Подключение к базе данных
-	conn, err := pgx.Connect(context.Background(), dbConnString)
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DB_URL"))
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
@@ -29,7 +33,7 @@ func main() {
 	}(conn, context.Background())
 
 	// Создание Telegram бота
-	bot, err := tgbotapi.NewBotAPI(telegramToken)
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAMTOKEN"))
 	if err != nil {
 		log.Fatalf("Failed to create bot: %v\n", err)
 	}
@@ -70,6 +74,6 @@ func updateDate(conn *pgx.Conn) error {
 	// Обновляем поле date в таблице test
 	currentTime := time.Now()
 	formattedDate := currentTime.Format("060102")
-	_, err := conn.Exec(context.Background(), "UPDATE barcode_profile SET ticket_expiry_date = $1 WHERE project_id = 10 AND card_series = '11' AND d=FALSE", formattedDate)
+	_, err := conn.Exec(context.Background(), "UPDATE test SET date = $1", formattedDate)
 	return err
 }
