@@ -36,7 +36,7 @@ func main() {
 		fmt.Errorf("Failed to create bot: %v\n", err)
 	}
 
-	fmt.Printf("Authorized on account %s", bot.Self.UserName)
+	fmt.Printf("Authorized on account %s\n", bot.Self.UserName)
 
 	// Обработка обновлений
 	u := tgbotapi.NewUpdate(0)
@@ -83,6 +83,11 @@ func main() {
 					bot.Send(msg)
 					fmt.Printf("Info: Отримання дати о %s\n", time.Now())
 				}
+
+			case "test":
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel() // Отмена контекста после завершения работы
+				queryes.TestContext(ctx)
 			}
 		}
 	}

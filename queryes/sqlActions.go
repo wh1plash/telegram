@@ -2,6 +2,7 @@ package queryes
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"telegram/queryes/sql"
 	"time"
@@ -53,4 +54,16 @@ func GetData(conn *pgx.Conn) ([]map[string]interface{}, error) {
 	}
 
 	return results, nil
+}
+
+func TestContext(ctx context.Context) {
+	time.Sleep(time.Second * 7)
+	select {
+	case <-time.After(7 * time.Second):
+		// Если операция завершилась успешно
+		fmt.Println("Context test completed")
+	case <-ctx.Done():
+		// Если контекст был отменен
+		fmt.Println("Context test canceled:", ctx.Err())
+	}
 }
