@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"telegram/initializers"
+	"telegram/queryes"
 	"time"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -17,13 +17,11 @@ func init() {
 	initializers.ConnectToDB()
 }
 
-const ()
-
 func main() {
 	// Подключение к базе данных
 	conn, err := pgx.Connect(context.Background(), os.Getenv("DB_URL"))
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+		fmt.Errorf("Unable to connect to database: %v\n", err)
 	}
 	defer func(conn *pgx.Conn, ctx context.Context) {
 		err := conn.Close(ctx)
@@ -35,10 +33,10 @@ func main() {
 	// Создание Telegram бота
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAMTOKEN"))
 	if err != nil {
-		log.Fatalf("Failed to create bot: %v\n", err)
+		fmt.Errorf("Failed to create bot: %v\n", err)
 	}
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	fmt.Printf("Authorized on account %s", bot.Self.UserName)
 
 	// Обработка обновлений
 	u := tgbotapi.NewUpdate(0)
@@ -54,26 +52,38 @@ func main() {
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "date":
-				err := updateDate(conn)
+				err := queryes.UpdateData(conn)
 				if err != nil {
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Помилка оновлення дати.")
 					bot.Send(msg)
-					fmt.Printf("Помилка оновлення дати о %s\n", time.Now())
+					fmt.Printf("Error: Помилка оновлення дати о %s\n", time.Now())
 				} else {
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Дата успішно оновлена для серії 11, проєкта Чернігів. "+
 						"Можна приступати до персоналізації")
 					bot.Send(msg)
-					fmt.Printf("Дата успішно оновлена о %s\n", time.Now())
+					fmt.Printf("Info: Оновлення дати о %s\n", time.Now())
+				}
+
+			case "getdate":
+				results, err := queryes.GetData(conn)
+				if err != nil {
+					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Помилка отримання дати.")
+					bot.Send(msg)
+					fmt.Printf("Error: Помилка отримання дати о %s\n", time.Now())
+					fmt.Printf("Помилка отримання дати: %s\n", err)
+				} else {
+					var response string
+					for _, row := range results {
+						for key, value := range row {
+							response += fmt.Sprintf("%s: %v\n", key, value)
+						}
+						response += "\n" // add empty row before print
+					}
+					msg := tgbotapi.NewMessage(update.Message.Chat.ID, response)
+					bot.Send(msg)
+					fmt.Printf("Info: Отримання дати о %s\n", time.Now())
 				}
 			}
 		}
 	}
-}
-
-func updateDate(conn *pgx.Conn) error {
-	// Обновляем поле date в таблице test
-	currentTime := time.Now()
-	formattedDate := currentTime.Format("060102")
-	_, err := conn.Exec(context.Background(), "UPDATE test SET date = $1", formattedDate)
-	return err
 }

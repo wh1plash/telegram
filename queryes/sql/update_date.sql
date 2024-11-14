@@ -1,0 +1,1 @@
+UPDATE test SET date = $1
