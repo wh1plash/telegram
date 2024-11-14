@@ -65,7 +65,9 @@ func main() {
 				}
 
 			case "getdate":
-				results, err := queryes.GetData(conn)
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				results, err := queryes.GetData(ctx, conn)
 				if err != nil {
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Помилка отримання дати.")
 					bot.Send(msg)

@@ -17,47 +17,53 @@ func UpdateData(conn *pgx.Conn) error {
 	return err
 }
 
-func GetData(conn *pgx.Conn) ([]map[string]interface{}, error) {
-	filePath := "./queryes/sql/select_date.sql"
-	rows, err := conn.Query(context.Background(), sql.ReadSQLFile(filePath))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Get columns names
-	columns := rows.FieldDescriptions()
-
-	// Create slice for results
-	var results []map[string]interface{}
-
-	for rows.Next() {
-		// Make slice for save data of each row
-		values := make([]interface{}, len(columns))
-		for i := range values {
-			values[i] = new(interface{})
-		}
-
-		// read the values into a slice
-		if err := rows.Scan(values...); err != nil {
+func GetData(ctx context.Context, conn *pgx.Conn) ([]map[string]interface{}, error) {
+	select {
+	case <-time.After(time.Second * 2):
+		filePath := "./queryes/sql/select_date.sql"
+		rows, err := conn.Query(context.Background(), sql.ReadSQLFile(filePath))
+		if err != nil {
 			return nil, err
 		}
+		defer rows.Close()
 
-		// Make map for save data with name columns
-		row := make(map[string]interface{})
-		for i, field := range columns {
-			row[string(field.Name)] = *(values[i].(*interface{}))
+		// Get columns names
+		columns := rows.FieldDescriptions()
+
+		// Create slice for results
+		var results []map[string]interface{}
+
+		for rows.Next() {
+			// Make slice for save data of each row
+			values := make([]interface{}, len(columns))
+			for i := range values {
+				values[i] = new(interface{})
+			}
+
+			// read the values into a slice
+			if err := rows.Scan(values...); err != nil {
+				return nil, err
+			}
+
+			// Make map for save data with name columns
+			row := make(map[string]interface{})
+			for i, field := range columns {
+				row[string(field.Name)] = *(values[i].(*interface{}))
+			}
+
+			// Add row to result
+			results = append(results, row)
 		}
 
-		// Add row to result
-		results = append(results, row)
-	}
+		return results, nil
 
-	return results, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func TestContext(ctx context.Context) {
-	time.Sleep(time.Second * 7)
+	//time.Sleep(time.Second * 3)
 	select {
 	case <-time.After(7 * time.Second):
 		// Если операция завершилась успешно
